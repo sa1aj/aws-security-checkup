@@ -1,6 +1,37 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: Minimal AWS security checkup - root MFA and public S3 checks
+Description: >-
+  Read-only AWS security checkup. Checks root MFA, S3 public access and CloudTrail
+  logging every day and emails you a PASS/FAIL report with fixes.
+
+Metadata:
+  AWS::ServerlessRepo::Application:
+    Name: aws-security-checkup
+    Description: >-
+      Read-only AWS security checkup. Checks root user MFA, S3 public access blocks
+      and CloudTrail logging daily, then emails a PASS/FAIL report with how-to-fix steps.
+      Every function has its own least-privilege, read-only IAM role.
+    Author: sa1aj
+    SpdxLicenseId: MIT
+    LicenseUrl: LICENSE
+    ReadmeUrl: README.md
+    Labels: [security, audit, s3, iam, cloudtrail, mfa]
+    HomePageUrl: https://github.com/sa1aj/aws-security-checkup
+    SemanticVersion: 1.0.0
+    SourceCodeUrl: https://github.com/sa1aj/aws-security-checkup
+
+Parameters:
+  NotificationEmail:
+    Type: String
+    Default: ""
+    Description: Email address for the daily report. AWS sends a confirmation email first. Leave blank for no email.
+  ScanSchedule:
+    Type: String
+    Default: rate(1 day)
+    Description: How often to run the checkup (EventBridge schedule expression).
+
+Conditions:
+  HasEmail: !Not [!Equals [!Ref NotificationEmail, ""]]
 
 Globals:
   Function:
@@ -60,6 +91,36 @@ Resources:
               Action: s3:GetAccountPublicAccessBlock
               Resource: "*"
 
+  CheckCloudTrailFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/check_cloudtrail/
+      Handler: app.lambda_handler
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Sid: ListTrails
+              Effect: Allow
+              Action: cloudtrail:DescribeTrails
+              Resource: "*"
+            - Sid: ReadTrailStatus
+              Effect: Allow
+              Action: cloudtrail:GetTrailStatus
+              Resource: arn:aws:cloudtrail:*:*:trail/*
+
+  ReportTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: AWS Security Checkup
+
+  ReportSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: HasEmail
+    Properties:
+      TopicArn: !Ref ReportTopic
+      Protocol: email
+      Endpoint: !Ref NotificationEmail
+
   ScanFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -69,8 +130,10 @@ Resources:
       Environment:
         Variables:
           TABLE_NAME: !Ref ResultsTable
+          REPORT_TOPIC_ARN: !Ref ReportTopic
           ROOT_MFA_FUNCTION: !Ref CheckRootMfaFunction
           PUBLIC_S3_FUNCTION: !Ref CheckPublicS3Function
+          CLOUDTRAIL_FUNCTION: !Ref CheckCloudTrailFunction
       Policies:
         - Version: "2012-10-17"
           Statement:
@@ -80,11 +143,21 @@ Resources:
               Resource:
                 - !GetAtt CheckRootMfaFunction.Arn
                 - !GetAtt CheckPublicS3Function.Arn
+                - !GetAtt CheckCloudTrailFunction.Arn
             - Sid: WriteScanResults
               Effect: Allow
               Action: dynamodb:PutItem
               Resource: !GetAtt ResultsTable.Arn
+            - Sid: SendReport
+              Effect: Allow
+              Action: sns:Publish
+              Resource: !Ref ReportTopic
       Events:
+        DailyScan:
+          Type: Schedule
+          Properties:
+            Schedule: !Ref ScanSchedule
+            Description: Run the security checkup on a schedule
         RunScan:
           Type: HttpApi
           Properties:

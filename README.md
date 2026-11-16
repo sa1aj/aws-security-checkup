@@ -49,19 +49,8 @@ To uninstall, delete the `serverlessrepo-aws-security-checkup` stack in the Clou
 
 ## Architecture
 
-```
-  EventBridge schedule ─┐
-     (daily)            │      ┌──────────────────┐
-                        ├────► │  ScanFunction    │──invoke──► CheckRootMfaFunction ───► IAM (read)
-  POST /scan ───────────┘      │  (orchestrator)  │──invoke──► CheckPublicS3Function ──► S3 (read)
-  (IAM-authorized)             │                  │──invoke──► CheckCloudTrailFunction ► CloudTrail (read)
-                               │                  │──invoke──► CheckAccessKeysFunction ► IAM (read)
-                               │                  │──PutItem─► ResultsTable (DynamoDB)
-                               └──────────────────┘──Publish─► ReportTopic (SNS) ──► your email
+![Architecture diagram](docs/architecture.svg)
 
-  GET /results ──► GetResultsFunction ──Query──► ResultsTable (DynamoDB)
-  (IAM-authorized)
-```
 
 - **EventBridge schedule** triggers a scan once a day (configurable with `ScanSchedule`).
 - **ScanFunction** invokes each check Lambda, combines the results with a UTC timestamp and an overall PASS/FAIL, writes one item to DynamoDB, then publishes a readable report to SNS.

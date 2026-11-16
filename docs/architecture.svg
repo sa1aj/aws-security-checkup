@@ -1,0 +1,158 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" width="1200" height="760" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#57606a"/>
+    </marker>
+    <marker id="arrow-w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#bc4c00"/>
+    </marker>
+    <style>
+      .box { fill: #ffffff; stroke-width: 2; }
+      .t { font-size: 15px; font-weight: 600; fill: #1f2328; }
+      .s { font-size: 12px; fill: #57606a; }
+      .lbl { font-size: 12px; fill: #57606a; font-weight: 600; }
+      .lblw { font-size: 12px; fill: #bc4c00; font-weight: 600; }
+      .line { stroke: #57606a; stroke-width: 1.8; fill: none; marker-end: url(#arrow); }
+      .wline { stroke: #bc4c00; stroke-width: 1.8; fill: none; marker-end: url(#arrow-w); }
+      .badge { font-size: 11px; font-weight: 700; }
+    </style>
+  </defs>
+
+  <!-- background -->
+  <rect x="0" y="0" width="1200" height="760" rx="16" fill="#f6f8fa"/>
+
+  <!-- title -->
+  <text x="40" y="48" font-size="24" font-weight="700" fill="#1f2328">AWS Security Checkup: architecture</text>
+  <text x="40" y="72" class="s" font-size="14">Serverless, deployed with AWS SAM. Every Lambda has its own least-privilege IAM role.</text>
+
+  <!-- account boundary -->
+  <rect x="24" y="96" width="1152" height="560" rx="14" fill="none" stroke="#8c959f" stroke-width="1.5" stroke-dasharray="7 5"/>
+  <text x="40" y="118" class="lbl">YOUR AWS ACCOUNT · us-east-1</text>
+
+  <!-- ===== triggers ===== -->
+  <rect class="box" x="44" y="150" width="230" height="72" rx="10" stroke="#e7157b"/>
+  <text x="60" y="180" class="t">EventBridge schedule</text>
+  <text x="60" y="202" class="s">runs a scan once a day</text>
+
+  <rect class="box" x="44" y="290" width="230" height="140" rx="10" stroke="#8c4fff"/>
+  <text x="60" y="320" class="t">API Gateway HTTP API</text>
+  <text x="60" y="342" class="s">IAM auth (signed requests only)</text>
+  <text x="60" y="360" class="s">throttled 1 req/s</text>
+  <rect x="60" y="374" width="94" height="22" rx="5" fill="#ddf4ff"/>
+  <text x="68" y="390" font-size="12" font-weight="700" fill="#0969da">POST /scan</text>
+  <rect x="60" y="400" width="104" height="22" rx="5" fill="#ddf4ff"/>
+  <text x="68" y="416" font-size="12" font-weight="700" fill="#0969da">GET /results</text>
+
+  <!-- ===== orchestrator + results ===== -->
+  <rect class="box" x="360" y="210" width="230" height="110" rx="10" stroke="#ed7100" stroke-width="2.5"/>
+  <text x="376" y="240" class="t">ScanFunction</text>
+  <text x="376" y="262" class="s">Lambda · orchestrator</text>
+  <text x="376" y="282" class="s">runs every check, saves result,</text>
+  <text x="376" y="300" class="s">emails the report</text>
+
+  <rect class="box" x="360" y="470" width="230" height="80" rx="10" stroke="#ed7100"/>
+  <text x="376" y="500" class="t">GetResultsFunction</text>
+  <text x="376" y="522" class="s">Lambda · returns latest scan</text>
+  <rect x="376" y="530" width="70" height="16" rx="4" fill="#dafbe1"/>
+  <text x="383" y="542" class="badge" fill="#1a7f37">READ-ONLY</text>
+
+  <!-- ===== check lambdas ===== -->
+  <g>
+    <rect class="box" x="700" y="140" width="210" height="62" rx="10" stroke="#ed7100"/>
+    <text x="716" y="166" class="t">check_root_mfa</text>
+    <rect x="716" y="176" width="70" height="16" rx="4" fill="#dafbe1"/>
+    <text x="723" y="188" class="badge" fill="#1a7f37">READ-ONLY</text>
+
+    <rect class="box" x="700" y="216" width="210" height="62" rx="10" stroke="#ed7100"/>
+    <text x="716" y="242" class="t">check_public_s3</text>
+    <rect x="716" y="252" width="70" height="16" rx="4" fill="#dafbe1"/>
+    <text x="723" y="264" class="badge" fill="#1a7f37">READ-ONLY</text>
+
+    <rect class="box" x="700" y="292" width="210" height="62" rx="10" stroke="#ed7100"/>
+    <text x="716" y="318" class="t">check_cloudtrail</text>
+    <rect x="716" y="328" width="70" height="16" rx="4" fill="#dafbe1"/>
+    <text x="723" y="340" class="badge" fill="#1a7f37">READ-ONLY</text>
+
+    <rect class="box" x="700" y="368" width="210" height="62" rx="10" stroke="#ed7100"/>
+    <text x="716" y="394" class="t">check_access_keys</text>
+    <rect x="716" y="404" width="70" height="16" rx="4" fill="#dafbe1"/>
+    <text x="723" y="416" class="badge" fill="#1a7f37">READ-ONLY</text>
+  </g>
+
+  <!-- ===== services read ===== -->
+  <rect class="box" x="990" y="140" width="166" height="62" rx="10" stroke="#dd344c"/>
+  <text x="1006" y="166" class="t">IAM</text>
+  <text x="1006" y="186" class="s">GetAccountSummary</text>
+
+  <rect class="box" x="990" y="216" width="166" height="62" rx="10" stroke="#7aa116"/>
+  <text x="1006" y="242" class="t">S3</text>
+  <text x="1006" y="262" class="s">public access blocks</text>
+
+  <rect class="box" x="990" y="292" width="166" height="62" rx="10" stroke="#e7157b"/>
+  <text x="1006" y="318" class="t">CloudTrail</text>
+  <text x="1006" y="338" class="s">trails + logging status</text>
+
+  <rect class="box" x="990" y="368" width="166" height="62" rx="10" stroke="#dd344c"/>
+  <text x="1006" y="394" class="t">IAM</text>
+  <text x="1006" y="414" class="s">users + access key age</text>
+
+  <!-- ===== storage + notification ===== -->
+  <rect class="box" x="700" y="470" width="210" height="80" rx="10" stroke="#3b48cc"/>
+  <text x="716" y="500" class="t">DynamoDB</text>
+  <text x="716" y="522" class="s">ResultsTable · on-demand</text>
+  <text x="716" y="540" class="s">scan history by timestamp</text>
+
+  <rect class="box" x="700" y="570" width="210" height="70" rx="10" stroke="#e7157b"/>
+  <text x="716" y="598" class="t">SNS ReportTopic</text>
+  <text x="716" y="620" class="s">PASS / FAIL report + fixes</text>
+
+  <!-- ===== outside the account ===== -->
+  <rect class="box" x="990" y="570" width="166" height="70" rx="10" stroke="#1f2328"/>
+  <text x="1006" y="598" class="t">📧 Your inbox</text>
+  <text x="1006" y="620" class="s">daily email (outside AWS)</text>
+
+  <!-- ===== arrows ===== -->
+  <!-- triggers to lambdas -->
+  <path class="line" d="M274,186 C320,186 320,240 358,240"/>
+  <path class="line" d="M154,385 L154,385 M274,385 C320,385 320,290 358,290"/>
+  <path class="line" d="M274,411 C320,411 320,510 358,510"/>
+
+  <!-- scan to checks -->
+  <path class="line" d="M590,250 C645,250 645,171 698,171"/>
+  <path class="line" d="M590,258 C645,258 645,247 698,247"/>
+  <path class="line" d="M590,266 C645,266 645,323 698,323"/>
+  <path class="line" d="M590,274 C645,274 645,399 698,399"/>
+  <text x="612" y="200" class="lbl">invoke</text>
+
+  <!-- checks to services (read) -->
+  <path class="line" d="M910,171 L988,171"/>
+  <path class="line" d="M910,247 L988,247"/>
+  <path class="line" d="M910,323 L988,323"/>
+  <path class="line" d="M910,399 L988,399"/>
+  <text x="926" y="134" class="lbl">read</text>
+
+  <!-- scan writes (own resources only) -->
+  <path class="wline" d="M590,300 C650,300 645,492 698,492"/>
+  <text x="606" y="462" class="lblw">PutItem</text>
+  <path class="wline" d="M590,312 C690,312 615,603 698,603"/>
+  <text x="612" y="596" class="lblw">Publish</text>
+
+  <!-- results read -->
+  <path class="line" d="M590,524 L698,524"/>
+  <text x="620" y="516" class="lbl">Query</text>
+
+  <!-- email -->
+  <path class="line" d="M910,605 L988,605"/>
+
+  <!-- ===== legend ===== -->
+  <g transform="translate(40,690)">
+    <line x1="0" y1="0" x2="34" y2="0" stroke="#57606a" stroke-width="1.8" marker-end="url(#arrow)"/>
+    <text x="44" y="4" class="s">invoke / read</text>
+    <line x1="160" y1="0" x2="194" y2="0" stroke="#bc4c00" stroke-width="1.8" marker-end="url(#arrow-w)"/>
+    <text x="204" y="4" class="s">the only writes: to the stack's own table and topic</text>
+    <rect x="560" y="-9" width="70" height="16" rx="4" fill="#dafbe1"/>
+    <text x="567" y="3" class="badge" fill="#1a7f37">READ-ONLY</text>
+    <text x="640" y="4" class="s">role cannot modify anything in the account</text>
+  </g>
+  <text x="40" y="732" class="s">Nothing in this stack can change IAM, S3, CloudTrail or any other account configuration.</text>
+</svg>

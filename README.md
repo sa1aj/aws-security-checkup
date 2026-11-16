@@ -27,7 +27,8 @@ Scanned at 2026-11-16T18:59:45+00:00
 
 ## Install in your account (no terminal)
 
-<!-- INSTALL_LINK -->
+**[👉 Install from the AWS Serverless Application Repository](https://console.aws.amazon.com/lambda/home?region=us-east-1#/create/app?applicationId=arn:aws:serverlessrepo:us-east-1:690998797525:applications/aws-security-checkup)**
+([public app page](https://serverlessrepo.aws.amazon.com/applications/us-east-1/690998797525/aws-security-checkup))
 
 1. Open the app in the **AWS Serverless Application Repository** (link above) while signed in to your AWS console.
 2. Enter your email in **NotificationEmail**.

@@ -42,14 +42,24 @@ Each function has its own role. Apart from CloudWatch Logs, which every Lambda n
 
 Nothing in this stack can modify IAM, S3, or any other account configuration. The only write is the scan Lambda's `PutItem` to its own results table.
 
-## Deploy
+## Deploy it in your own account
 
-Requires the [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html) and Python 3.13.
+The checkup scans **the account it is deployed into**. To check your own account, deploy
+your own copy. Nobody else gets access to your account or your results.
+
+Requires the [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html),
+Python 3.13, and AWS credentials allowed to create CloudFormation stacks, Lambda functions,
+IAM roles, DynamoDB tables and API Gateway APIs.
 
 ```bash
+git clone https://github.com/sa1aj/aws-security-checkup
+cd aws-security-checkup
 sam build
-sam deploy            # uses samconfig.toml; edit the profile/region there
+sam deploy --profile <your-profile>      # add --region <region> to deploy outside us-east-1
 ```
+
+`sam deploy` shows a changeset (including the IAM roles listed above) and asks you to
+confirm before anything is created. The API URL is printed in the stack outputs as `ApiUrl`.
 
 ## Use
 

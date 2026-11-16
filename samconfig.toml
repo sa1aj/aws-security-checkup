@@ -4,7 +4,6 @@ version = 0.1
 stack_name = "aws-security-checkup"
 
 [default.deploy.parameters]
-profile = "agent-toolkit"
 region = "us-east-1"
 capabilities = "CAPABILITY_IAM"
 resolve_s3 = true

@@ -12,12 +12,14 @@ CHECK_FUNCTIONS = [
     os.environ["ROOT_MFA_FUNCTION"],
     os.environ["PUBLIC_S3_FUNCTION"],
     os.environ["CLOUDTRAIL_FUNCTION"],
+    os.environ["ACCESS_KEYS_FUNCTION"],
 ]
 
 TITLES = {
     "root_mfa": "Root user MFA",
     "public_s3": "S3 public access",
     "cloudtrail": "CloudTrail logging",
+    "access_keys": "Access key age",
 }
 
 FIXES = {
@@ -25,6 +27,8 @@ FIXES = {
     "public_s3": "S3 console > Block Public Access settings for this account > turn all four on "
     "(check nothing needs to be public first).",
     "cloudtrail": "CloudTrail console > Create trail > apply to all regions.",
+    "access_keys": "IAM console > Users > Security credentials > create a new key, "
+    "switch your apps to it, then deactivate and delete the old one.",
 }
 
 ICONS = {"PASS": "✅", "FAIL": "❌", "ERROR": "⚠️"}
@@ -56,6 +60,8 @@ def build_report(item):
         lines.append(f"   {c['details']}")
         for b in c.get("exposed_buckets", []):
             lines.append(f"   - {b['bucket']} (off: {', '.join(b['missing_settings'])})")
+        for k in c.get("old_keys", []):
+            lines.append(f"   - {k['user']}: key ending {k['key_id']} is {k['age_days']} days old")
         if c["status"] != "PASS" and name in FIXES:
             lines.append(f"   How to fix: {FIXES[name]}")
         lines.append("")

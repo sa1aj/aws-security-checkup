@@ -4,7 +4,7 @@ A read-only serverless security checkup for your AWS account. It runs every day 
 **emails you a PASS/FAIL report with how-to-fix steps**. You don't need a terminal to use it.
 
 ```
-AWS Security Checkup: 2/3 checks passed
+AWS Security Checkup: 2/4 checks passed
 Scanned at 2026-11-16T18:59:45+00:00
 
 ✅ Root user MFA: PASS
@@ -17,6 +17,11 @@ Scanned at 2026-11-16T18:59:45+00:00
 
 ✅ CloudTrail logging: PASS
    Multi-region CloudTrail is logging: main-trail.
+
+❌ Access key age: FAIL
+   1 active access key(s) older than 90 days.
+   - deploy-bot: key ending 7QXA is 131 days old
+   How to fix: IAM console > Users > Security credentials > create a new key, switch your apps to it, then deactivate and delete the old one.
 ```
 
 | Check | What it verifies | Pass condition |
@@ -24,6 +29,7 @@ Scanned at 2026-11-16T18:59:45+00:00
 | `root_mfa` | The account root user has MFA enabled | `AccountMFAEnabled == 1` from `iam:GetAccountSummary` |
 | `public_s3` | Every S3 bucket is fully blocked from public access | All four Block Public Access settings are on, at the account level or the bucket level |
 | `cloudtrail` | API activity is being recorded | At least one multi-region CloudTrail trail is logging |
+| `access_keys` | IAM access keys are rotated | No active access key is older than 90 days |
 
 ## Install in your account (no terminal)
 
@@ -47,6 +53,7 @@ To uninstall, delete the `serverlessrepo-aws-security-checkup` stack in the Clou
                         ├────► │  ScanFunction    │──invoke──► CheckRootMfaFunction ───► IAM (read)
   POST /scan ───────────┘      │  (orchestrator)  │──invoke──► CheckPublicS3Function ──► S3 (read)
   (IAM-authorized)             │                  │──invoke──► CheckCloudTrailFunction ► CloudTrail (read)
+                               │                  │──invoke──► CheckAccessKeysFunction ► IAM (read)
                                │                  │──PutItem─► ResultsTable (DynamoDB)
                                └──────────────────┘──Publish─► ReportTopic (SNS) ──► your email
 
@@ -72,7 +79,8 @@ Each function has its own role. Apart from CloudWatch Logs, which every Lambda n
 | | `s3:GetBucketPublicAccessBlock` | `arn:aws:s3:::*` |
 | CheckCloudTrailFunction | `cloudtrail:DescribeTrails` | `*` (no resource scoping available) |
 | | `cloudtrail:GetTrailStatus` | trails only (`arn:aws:cloudtrail:*:*:trail/*`) |
-| ScanFunction | `lambda:InvokeFunction` | the three check functions only |
+| CheckAccessKeysFunction | `iam:ListUsers`, `iam:ListAccessKeys` | IAM users in this account only |
+| ScanFunction | `lambda:InvokeFunction` | the four check functions only |
 | | `dynamodb:PutItem` | the results table only |
 | | `sns:Publish` | the report topic only |
 | GetResultsFunction | `dynamodb:Query` | the results table only |

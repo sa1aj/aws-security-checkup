@@ -21,7 +21,7 @@ It runs two read-only checks and stores the results in DynamoDB:
   (both routes served by one API Gateway HTTP API)
 ```
 
-- **API Gateway HTTP API** exposes `POST /scan` and `GET /results`, throttled to 1 request/second (burst 5).
+- **API Gateway HTTP API** exposes `POST /scan` and `GET /results`, protected by IAM authorization (SigV4-signed requests only) and throttled to 1 request/second (burst 5).
 - **ScanFunction** invokes each check Lambda synchronously, combines the results with a UTC timestamp and an overall PASS/FAIL, and writes one item to DynamoDB.
 - **Check Lambdas** only read account configuration. They have no write permissions of any kind.
 - **GetResultsFunction** queries the newest scan (`pk = "SCAN"`, sorted by `scanned_at` descending, limit 1).
@@ -53,11 +53,18 @@ sam deploy            # uses samconfig.toml; edit the profile/region there
 
 ## Use
 
-```bash
-API=https://<api-id>.execute-api.us-east-1.amazonaws.com
+The API uses **IAM authorization**. Unsigned requests get `403 Forbidden`, so the
+results (which name your buckets and account ID) are not public. Sign requests with
+AWS credentials that have `execute-api:Invoke` on the API, e.g. with
+[awscurl](https://github.com/okigan/awscurl):
 
-curl -X POST $API/scan     # run the checks and store the results
-curl $API/results          # fetch the latest stored results
+```bash
+pip install awscurl
+API=https://<api-id>.execute-api.us-east-1.amazonaws.com
+eval "$(aws configure export-credentials --profile <your-profile> --format env)"
+
+awscurl --service execute-api --region us-east-1 -X POST $API/scan   # run the checks and store the results
+awscurl --service execute-api --region us-east-1 $API/results        # fetch the latest stored results
 ```
 
 Example response:

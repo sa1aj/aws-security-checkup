@@ -118,6 +118,9 @@ Resources:
   CheckupApi:
     Type: AWS::Serverless::HttpApi
     Properties:
+      Auth:
+        EnableIamAuthorizer: true
+        DefaultAuthorizer: AWS_IAM
       DefaultRouteSettings:
         ThrottlingBurstLimit: 5
         ThrottlingRateLimit: 1

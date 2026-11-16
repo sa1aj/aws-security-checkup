@@ -1,0 +1,130 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Minimal AWS security checkup - root MFA and public S3 checks
+
+Globals:
+  Function:
+    Runtime: python3.13
+    Architectures: [arm64]
+    Timeout: 30
+    MemorySize: 128
+
+Resources:
+  ResultsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: scanned_at
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: scanned_at
+          KeyType: RANGE
+
+  CheckRootMfaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/check_root_mfa/
+      Handler: app.lambda_handler
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Sid: ReadAccountSummary
+              Effect: Allow
+              Action: iam:GetAccountSummary
+              Resource: "*"
+
+  CheckPublicS3Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/check_public_s3/
+      Handler: app.lambda_handler
+      Timeout: 60
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Sid: ListBuckets
+              Effect: Allow
+              Action: s3:ListAllMyBuckets
+              Resource: "*"
+            - Sid: ReadBucketPublicAccessBlock
+              Effect: Allow
+              Action: s3:GetBucketPublicAccessBlock
+              Resource: arn:aws:s3:::*
+            - Sid: ReadAccountPublicAccessBlock
+              Effect: Allow
+              Action: s3:GetAccountPublicAccessBlock
+              Resource: "*"
+
+  ScanFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/scan/
+      Handler: app.lambda_handler
+      Timeout: 90
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref ResultsTable
+          ROOT_MFA_FUNCTION: !Ref CheckRootMfaFunction
+          PUBLIC_S3_FUNCTION: !Ref CheckPublicS3Function
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Sid: InvokeCheckFunctions
+              Effect: Allow
+              Action: lambda:InvokeFunction
+              Resource:
+                - !GetAtt CheckRootMfaFunction.Arn
+                - !GetAtt CheckPublicS3Function.Arn
+            - Sid: WriteScanResults
+              Effect: Allow
+              Action: dynamodb:PutItem
+              Resource: !GetAtt ResultsTable.Arn
+      Events:
+        RunScan:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CheckupApi
+            Path: /scan
+            Method: POST
+
+  GetResultsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/get_results/
+      Handler: app.lambda_handler
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref ResultsTable
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Sid: ReadScanResults
+              Effect: Allow
+              Action: dynamodb:Query
+              Resource: !GetAtt ResultsTable.Arn
+      Events:
+        GetResults:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CheckupApi
+            Path: /results
+            Method: GET
+
+  CheckupApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 5
+        ThrottlingRateLimit: 1
+
+Outputs:
+  ApiUrl:
+    Description: Base URL of the HTTP API
+    Value: !Sub https://${CheckupApi}.execute-api.${AWS::Region}.amazonaws.com
+  ResultsTableName:
+    Value: !Ref ResultsTable

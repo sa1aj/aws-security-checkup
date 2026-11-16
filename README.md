@@ -1,5 +1,7 @@
 # AWS Security Checkup
 
+[![tests](https://github.com/sa1aj/aws-security-checkup/actions/workflows/tests.yml/badge.svg)](https://github.com/sa1aj/aws-security-checkup/actions/workflows/tests.yml)
+
 A read-only serverless security checkup for your AWS account. It runs every day and
 **emails you a PASS/FAIL report with how-to-fix steps**. You don't need a terminal to use it.
 
@@ -114,6 +116,15 @@ eval "$(aws configure export-credentials --profile <your-profile> --format env)"
 
 .venv/bin/awscurl --service execute-api --region us-east-1 -X POST $API/scan   # run now (also emails the report)
 .venv/bin/awscurl --service execute-api --region us-east-1 $API/results        # latest stored results
+```
+
+### Run the tests
+
+The tests use fake AWS clients, so they never touch a real account:
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest -v
 ```
 
 ### Clean up
